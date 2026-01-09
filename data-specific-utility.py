@@ -97,7 +97,7 @@ def data_specific_utility(filepath_synthetic, filepath_original, filepath_result
     return compute_difference(synth_df)
     
 
-def plot_spec_variable_pairs(filepath, filepath_results, sep_synth = ',', name = "original_data", extract_date=False):
+def plot_spec_variable_pairs(filepath, filepath_results, sep_synth = ',', name = "original_data"):
     """
     This plot generates several plots for specific variable pairs in the data.
     Parameters:
@@ -106,36 +106,39 @@ def plot_spec_variable_pairs(filepath, filepath_results, sep_synth = ',', name =
     - sep_synth: separator used in the synthetic data CSV file.
     - name: A string indicating the name of the dataset. This
     name should contain the method and parameter values used when it is not original data.
+
+    NOTE: This code is heavily dependent on the formatting of your date variables. 
+    It is designed such that the synthetic variables are of the format "2025-02-23",
+    so %Y%m%d and this is normalized to remove the time component.
+
+    If your synthetic data are of a different format, please adjust the code accordingly.
     
     """
 
-    
     if name == "original_data":
         df = pd.read_csv(filepath, sep=';', encoding='utf-8', low_memory=False)
         df['BRUTSAL'] = df['BRUTSAL'].str.replace(',', '.').astype('float64')
         df['OMVBTR'] = df['OMVBTR'].str.replace(',', '.').astype('float64')
         df['OMVDIO'] = df['OMVDIO'].str.replace(',', '.').astype('float64')
         df['DATEIND'] = pd.to_datetime(df['DATEIND'], format='%Y%m%d', errors='coerce')
+        df['DATBEG'] = pd.to_datetime(df['DATBEG'], format='%Y%m%d', errors='coerce')
     else:
         df = pd.read_csv(filepath, sep=sep_synth, encoding='utf-8', low_memory=False)
-    print("start dateind")
-    print(df['DATEIND'])
-
-
-    # Extract only the date part
-    if extract_date:
         df['DATEIND'] = pd.to_datetime(df['DATEIND'], errors='coerce')
-        df['DATEIND'] = df['DATEIND'].dt.date
-    print(df['DATEIND'])
+        df['DATBEG'] = pd.to_datetime(df['DATBEG'], errors='coerce')
 
-    sns.violinplot(x=df['FCAT'], y=df['DATEIND'])
+    # Some general preprocessing.
+    df['DATEIND_days'] = (df['DATEIND'] - pd.Timestamp('1900-01-01')) 
+    df['DATBEG_days'] = (df['DATBEG'] - pd.Timestamp('1900-01-01')) 
+    df['FCAT'] = df['FCAT'].astype('category')
+
+    sns.violinplot(data=df, x='FCAT', y='DATEIND_days')
     plt.title("Violin: FCAT and DATEIND for " + name)
     plt.savefig(filepath_results + "DATEIND_FCAT" + name + ".png")
     plt.close()
 
     order = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10',
              '11', '12', '13', '14', '15', '16','17', '18', 'BCAO', 'HO11', 'HO12', 'LB', 'LC', 'LD', 'LE', 'LIO', 'ML', 'MLBB', 'P', 'XXX']    
-    print("start SALSCH")
 
     plt.figure(figsize=(14, 6))  # Wider plot
     sns.violinplot(x='SALSCH', y='BRUTSAL', data=df, order=order)
@@ -144,7 +147,6 @@ def plot_spec_variable_pairs(filepath, filepath_results, sep_synth = ',', name =
     plt.tight_layout()
     plt.savefig(filepath_results + f"SALSCH_BRUTSAL" + name + ".png")
     plt.close()
-    print("start OMVDIO")
 
     sns.scatterplot(x=df['OMVDIO'], y=df['OMVBTR'], alpha=0.05)
     plt.title("Scatterplot: OMVDIO and OMVBTR for " + name)
@@ -152,20 +154,21 @@ def plot_spec_variable_pairs(filepath, filepath_results, sep_synth = ',', name =
     plt.close()
     print("start DATBEG")
 
-    sns.scatterplot(x=df['DATBEG'], y=df['OMVBTR'], alpha=0.05)
+    sns.scatterplot(x=df['DATBEG_days'], y=df['OMVBTR'], alpha=0.05)
     plt.title("Scatterplot: DATBEG and OMVBTR for " + name)
     plt.savefig(filepath_results + f"DATBEG_OMVBTR" + name + ".png")
     plt.close()
 
 if __name__ == "__main__":
+    '''
+    # Example usage (fill in paths and uncomment section):
 
-    filepath_results = "C:/Users/kroessks/OneDrive - TNO/Documents/Projects/DUO/TDCC/results/"
-    filepath_orig = "C:/Users/kroessks/OneDrive - TNO/Documents/Projects/DUO/TDCC/data/synthetische_data_MBO_personeel_2025/synthetische_data_MBO_personeel_2025_pd202410.csv"
-    filepath_synth = "C:/Users/kroessks/OneDrive - TNO/Documents/Projects/DUO/TDCC/data/synthetic_postprocessed/synth_t_65.csv"
+    filepath_results = **Please fill in string to location where results will be saved**
+    filepath_orig = **Please fill in string to location of original data as provided by Lotte**
+    filepath_synth = **Please fill in string to location of csv with synthetic data**
     plot_spec_variable_pairs(filepath_orig, filepath_results, name="original_data")    
-    # plot_spec_variable_pairs(filepath_synth, filepath_results, name="synthetic t 65")    
+    plot_spec_variable_pairs(filepath_synth, filepath_results, name="** add name to indicate method and parameters**")    
+    data_specific_utility(filepath_synth, filepath_orig, filepath_results)
 
-    # data_specific_utility(filepath_synth, filepath_orig, filepath_results, names=["synth_t_65"], save=True)
-    plot_spec_variable_pairs(filepath_synth, filepath_results, name="synthetic t 65", extract_date=True)    
+    '''
 
-    # data_specific_utility(filepath_synth, filepath_orig, filepath_results, names=["synth_t_65"], save=True)
